@@ -9,12 +9,13 @@ class ImageEditorView extends ScrollView
     @div class: 'image-view', tabindex: -1, =>
       @div class: 'image-controls', outlet: 'imageControls', =>
         @div class: 'image-controls-group', =>
-          @a outlet: 'whiteTransparentBackgroundButton', class: 'image-controls-color-white', value: 'white', =>
-            @text 'white'
-          @a outlet: 'blackTransparentBackgroundButton', class: 'image-controls-color-black', value: 'black', =>
-            @text 'black'
-          @a outlet: 'transparentTransparentBackgroundButton', class: 'image-controls-color-transparent', value: 'transparent', =>
-            @text 'transparent'
+          @select outlet: 'backgroundColorSelect', class: 'input-select', =>
+            @option 'background', value: ''
+            @option 'White', value: 'white'
+            @option 'Black', value: 'black'
+            @option 'Transparent', value: 'transparent'
+            @option 'Chess (light)', value: 'chess-light'
+            @option 'Chess (dark)', value: 'chess-dark'
         @div class: 'image-controls-group btn-group', =>
           @button class: 'btn', outlet: 'zoomOutButton', '-'
           @button class: 'btn reset-zoom-button', outlet: 'resetZoomButton', '100%'
@@ -34,6 +35,7 @@ class ImageEditorView extends ScrollView
     @disposables = new CompositeDisposable
 
     @loaded = false
+    @loadedTime = 0
     @mode = 'reset-zoom'
     @image.hide()
     @updateImageURI()
@@ -53,13 +55,10 @@ class ImageEditorView extends ScrollView
       @image.show()
       @emitter.emit 'did-load'
 
-    @disposables.add atom.tooltips.add @whiteTransparentBackgroundButton[0], title: "Use white transparent background"
-    @disposables.add atom.tooltips.add @blackTransparentBackgroundButton[0], title: "Use black transparent background"
-    @disposables.add atom.tooltips.add @transparentTransparentBackgroundButton[0], title: "Use transparent background"
-
     if @getPane()
-      @imageControls.find('a').on 'click', (e) =>
-        @changeBackground $(e.target).attr 'value'
+      @backgroundColorSelect.on 'change', (e) =>
+        @changeBackground e.target.value
+        e.target.value = ''
 
     @zoomInButton.on 'click', => @zoomIn()
     @zoomOutButton.on 'click', => @zoomOut()
@@ -73,7 +72,13 @@ class ImageEditorView extends ScrollView
     @disposables.dispose()
 
   updateImageURI: ->
-    @image.attr('src', "#{@editor.getEncodedURI()}?time=#{Date.now()}")
+    timestamp = Date.now()
+    buffer = new Image()
+    buffer.src = "#{@editor.getEncodedURI()}?time=#{timestamp}"
+    buffer.onload =()=>
+      if @loadedTime < timestamp
+        @loadedTime = timestamp
+        @image.attr('src', buffer.src)
 
   # Retrieves this view's pane.
   #
